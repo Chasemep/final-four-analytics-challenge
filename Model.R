@@ -180,7 +180,7 @@ test$Quadrant4.Ratio = test_records_q4$Win/(test_records_q4$Loss+1)
 # WAB
 ################################################################################
 # Import match data collected from https://collegebasketballdata.com
-match_data = read.csv("C:\\Users\\Chase\\Desktop\\NCAAStuff\\CleanData\\college_basketball_games_2020_2025.csv")
+match_data = read.csv("data/college_basketball_games_2020_2025.csv")
 
 # Combined training and test data to lower calculations
 all_teams_data = rbind(train[, c("Team", "Season", "Net.Rank")], 
@@ -259,12 +259,20 @@ colSums(is.na(test))
 ################################################################################
 
 ################################################################################
+# QUADRANT SCORE
+################################################################################
+train$Q.Score=(train$Quadrant1.Win-train$Quadrant1.Loss)*0.4+(train$Quadrant2.Win-train$Quadrant2.Loss)*0.3+(train$Quadrant3.Win-train$Quadrant3.Loss)*0.2+(train$Quadrant4.Win-train$Quadrant4.Loss)*0.1
+train$Q.Score
+test$Q.Score=(test$Quadrant1.Win-test$Quadrant1.Loss)*0.4+(test$Quadrant2.Win-test$Quadrant2.Loss)*0.3+(test$Quadrant3.Win-test$Quadrant3.Loss)*0.2+(test$Quadrant4.Win-test$Quadrant4.Loss)*0.1
+################################################################################
+
+################################################################################
 # Linear Model
 ################################################################################
 names(train)
 head(train)
 model = lm(Overall.Seed~Net.Rank+prevNET+AvgOppNETRank+AvgOppNET+NETSOS+NETNonConfSOS+Win+Loss+Conf.Win+Conf.Loss+Non.Conference.Win+RoadWin+RoadLoss+Quadrant1.Win+Quadrant1.Loss+Quadrant2.Win+Quadrant2.Loss+Quadrant3.Win+Quadrant3.Loss+Quadrant4.Win+WL.Ratio+Conf.Ratio+Non.Conference.Ratio+RoadRatio+Quadrant1.Ratio+Quadrant2.Ratio+Quadrant3.Ratio+Quadrant4.Ratio, data = train)
-# Removed +Quadrant4.Loss+Non.Conference.Loss
+# Removed +Quadrant4.Loss+Non.Conference.Loss+Q.Score
 
 summary(model)
 
