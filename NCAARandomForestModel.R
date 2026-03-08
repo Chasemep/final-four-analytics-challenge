@@ -1,6 +1,5 @@
 ################################################################################
 # NCAA SEED PREDICTION MODEL
-# Best Score: 1.94935 RMSE
 # Models: XGBoost + Linear Model Ensemble
 # Post-processing: Domain knowledge caps/floors based on NET rank
 ################################################################################
@@ -14,7 +13,6 @@ library(randomForest)
 
 ################################################################################
 # READ DATA
-# Update base_path to match your local directory
 ################################################################################
 base_path   <- "/Users/gowrisreejuttiga/Documents/NCAA Analytics/final-four-analytics-challenge/"
 
@@ -30,7 +28,6 @@ names(test_input)  <- gsub("-", ".", names(test_input))
 
 ################################################################################
 # SPLIT RECORDS FUNCTION
-# Raw data stores records as strings like "22-2" or "8-Sep" (date encoding)
 # This function splits them into separate Win and Loss columns
 ################################################################################
 clean_and_split <- function(vec) {
