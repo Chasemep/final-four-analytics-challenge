@@ -6,7 +6,6 @@ library(dplyr)
 
 ################################################################################
 # READ DATA
-# Update file paths to match your local directory
 ################################################################################
 base_path        <- "/Users/gowrisreejuttiga/Documents/NCAA Analytics/final-four-analytics-challenge/"
 test_input       <- read.csv(paste0(base_path, "data/NCAA_Seed_Test_Set2.0.csv"),      na.strings = "", stringsAsFactors = FALSE)
@@ -305,7 +304,7 @@ best_preds <- if (ens_rmse <= min(local_rmse, lm_local_rmse)) {
 }
 
 ################################################################################
-# POST-PROCESSING: Domain knowledge fixes
+# POST-PROCESSING: domain knowledge fixes
 ################################################################################
 pred_df_final <- data.frame(
   RecordID     = test$RecordID,
@@ -353,7 +352,7 @@ cat("\nFinal seed distribution:\n")
 print(table(pred_df_final$FinalSeed[pred_df_final$FinalSeed > 0]))
 
 ################################################################################
-# SUBMISSION - using match() to preserve template row order
+# SUBMISSION
 ################################################################################
 sub_template <- read.csv(paste0(base_path, "data/submission_template2.0.csv"))
 
