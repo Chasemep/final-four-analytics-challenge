@@ -286,8 +286,8 @@ length(predicted_seeds)
 library(xgboost)
 trainXG = subset(train, !is.na(train$Overall.Seed))
 names(train)
-XTrain <- as.matrix(trainXG[, c("WAB", "Net.Rank", "Win", "Loss","Conf.Win","Conf.Loss","Non.Conference.Win","Non.Conference.Loss","RoadWin","RoadLoss","Quadrant1.Win","Quadrant1.Loss","Quadrant2.Win","Quadrant2.Loss","Quadrant3.Win","Quadrant3.Loss","Quadrant4.Win","Quadrant4.Loss","WL.Ratio","Conf.Ratio","Non.Conference.Ratio","RoadRatio","Quadrant1.Ratio","Quadrant2.Ratio","Quadrant3.Ratio","Quadrant4.Ratio")])
-XTest <- as.matrix(test[, c("WAB", "Net.Rank", "Win", "Loss","Conf.Win","Conf.Loss","Non.Conference.Win","Non.Conference.Loss","RoadWin","RoadLoss","Quadrant1.Win","Quadrant1.Loss","Quadrant2.Win","Quadrant2.Loss","Quadrant3.Win","Quadrant3.Loss","Quadrant4.Win","Quadrant4.Loss","WL.Ratio","Conf.Ratio","Non.Conference.Ratio","RoadRatio","Quadrant1.Ratio","Quadrant2.Ratio","Quadrant3.Ratio","Quadrant4.Ratio")])
+XTrain <- as.matrix(trainXG[, c("Net.Rank", "Win", "Loss","Conf.Win","Conf.Loss","Non.Conference.Win","Non.Conference.Loss","RoadWin","RoadLoss","Quadrant1.Win","Quadrant1.Loss","Quadrant2.Win","Quadrant2.Loss","Quadrant3.Win","Quadrant3.Loss","Quadrant4.Win","Quadrant4.Loss","WL.Ratio","Conf.Ratio","Non.Conference.Ratio","RoadRatio","Quadrant1.Ratio","Quadrant2.Ratio","Quadrant3.Ratio","Quadrant4.Ratio")])
+XTest <- as.matrix(test[, c("Net.Rank", "Win", "Loss","Conf.Win","Conf.Loss","Non.Conference.Win","Non.Conference.Loss","RoadWin","RoadLoss","Quadrant1.Win","Quadrant1.Loss","Quadrant2.Win","Quadrant2.Loss","Quadrant3.Win","Quadrant3.Loss","Quadrant4.Win","Quadrant4.Loss","WL.Ratio","Conf.Ratio","Non.Conference.Ratio","RoadRatio","Quadrant1.Ratio","Quadrant2.Ratio","Quadrant3.Ratio","Quadrant4.Ratio")])
 y <- trainXG$Overall.Seed
 
 good <- complete.cases(XTrain, y)
@@ -326,15 +326,49 @@ predicted_seeds <- round(predict(model_xgb, XTest))
 ################################################################################
 
 ################################################################################
+# RANKING LOGIC
+################################################################################
+# Add predictions to test set for sorting
+test$predicted_seed_val <- predicted_seeds
+test$Final.Rank <- 0 # Initialize with 0
+
+# Process unique seasons in the test set
+for (s in unique(test$Season)) {
+  # 1. Identify known ranks for this season from the training set
+  known_ranks <- train$Overall.Seed[train$Season == s & !is.na(train$Overall.Seed)]
+  known_ranks <- unique(as.numeric(known_ranks))
+  
+  # 2. Determine which ranks from 1-68 are still available
+  available_ranks <- sort(setdiff(1:68, known_ranks))
+  
+  # 3. Identify teams in the test set for this season that need a rank (Bid.Type != NA)
+  to_be_ranked_mask <- test$Season == s & !is.na(test$Bid.Type)
+  test_indices <- which(to_be_ranked_mask)
+  
+  if (length(test_indices) > 0) {
+    # 4. Sort these teams by their predicted seed values
+    # In case of ties, use Net.Rank as a secondary sort key
+    sorted_test_indices <- test_indices[order(test$predicted_seed_val[test_indices], test$Net.Rank[test_indices])]
+    
+    # 5. Assign available ranks to these teams in the sorted order
+    num_to_assign <- min(length(sorted_test_indices), length(available_ranks))
+    test$Final.Rank[sorted_test_indices[1:num_to_assign]] <- available_ranks[1:num_to_assign]
+  }
+}
+################################################################################
+
+################################################################################
 # SUBMISSION
 ################################################################################
 # Load submission template
 submission = read.csv(submission_template)
-submission$Overall.Seed = predicted_seeds
-submission$Overall.Seed[is.na(test$Bid.Type)] = 0
-submission$Overall.Seed[submission$Overall.Seed>68] = 68
-submission$Overall.Seed[submission$Overall.Seed<0] = 1
-names(submission)[2] = "Overall Seed"
+
+# Assign the calculated unique ranks
+# The submission template RecordID should match test RecordID order
+submission$Overall.Seed = test$Final.Rank
+
+# Rename column to match template requirement if necessary
+names(submission)[names(submission) == "Overall.Seed"] <- "Overall Seed"
 
 # Write final submission file
 write.csv(submission, "submissions/submission.csv", row.names = FALSE)
