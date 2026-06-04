@@ -7,110 +7,235 @@ library(openxlsx)
 library(rvest)
 
 ################################################################################
-# READ DATA
+# TEAM NAME NORMALIZATION DICTIONARY
 ################################################################################
-test_input       <- read.csv("data/NCAA_Seed_Test_Set_2026.csv",      na.strings = "", stringsAsFactors = FALSE)
-train_input      <- read.csv("data/NCAA_Seed_Training_Set2.0.csv",  na.strings = "", stringsAsFactors = FALSE)
-match_data       <- read.csv("data/college_basketball_games_2020_2025.csv")
-
-# Fix column names with spaces and dashes
-names(train_input) <- gsub(" ", ".", names(train_input))
-names(test_input)  <- gsub(" ", ".", names(test_input))
-names(train_input) <- gsub("-", ".", names(train_input))
-names(test_input)  <- gsub("-", ".", names(test_input))
+normalize_team_name <- function(name) {
+  if (is.na(name) || name == "") return(NA_character_)
+  name <- gsub("\\[[a-z]\\]", "", name) # Remove trailing Wikipedia footnotes
+  name <- trimws(gsub("\u00a0", " ", name))
+  
+  switch(name,
+    "Saint Mary's"        = "Saint Mary's (CA)",
+    "Saint Mary's (CA)"   = "Saint Mary's (CA)",
+    "Queens"              = "Queens (NC)",
+    "Queens (NC)"         = "Queens (NC)",
+    "Prairie View A&M"   = "Prairie View",
+    "Prairie View"        = "Prairie View",
+    "Northern Iowa"       = "UNI",
+    "UNI"                 = "UNI",
+    "St. John's"          = "St. John's (NY)",
+    "St. John's (NY)"     = "St. John's (NY)",
+    "North Dakota State"  = "North Dakota St.",
+    "North Dakota St."    = "North Dakota St.",
+    "Tennessee State"     = "Tennessee St.",
+    "Tennessee St."       = "Tennessee St.",
+    "Michigan State"      = "Michigan St.",
+    "Michigan St."        = "Michigan St.",
+    "Ohio State"          = "Ohio St.",
+    "Ohio St."            = "Ohio St.",
+    "South Florida"       = "South Fla.",
+    "South Fla."          = "South Fla.",
+    "Utah State"          = "Utah St.",
+    "Utah St."            = "Utah St.",
+    "Kennesaw State"      = "Kennesaw St.",
+    "Kennesaw St."        = "Kennesaw St.",
+    "Iowa State"          = "Iowa St.",
+    "Iowa St."            = "Iowa St.",
+    "Wright State"        = "Wright St.",
+    "Wright St."          = "Wright St.",
+    "San Diego State"     = "San Diego St.",
+    "San Diego St."       = "San Diego St.",
+    "Washington State"    = "Washington St.",
+    "Washington St."      = "Washington St.",
+    "Florida Atlantic"    = "Fla. Atlantic",
+    "Fla. Atlantic"       = "Fla. Atlantic",
+    "Morehead State"      = "Morehead St.",
+    "Morehead St."        = "Morehead St.",
+    "South Dakota State"  = "South Dakota St.",
+    "South Dakota St."    = "South Dakota St.",
+    "Mississippi State"   = "Mississippi St.",
+    "Mississippi St."     = "Mississippi St.",
+    "Grand Canyon"        = "Grand Canyon",
+    "Long Beach State"    = "Long Beach St.",
+    "Long Beach St."      = "Long Beach St.",
+    "Boise State"         = "Boise St.",
+    "Boise St."           = "Boise St.",
+    "NC State"            = "NC State",
+    "Western Kentucky"    = "Western Ky.",
+    "Western Ky."         = "Western Ky.",
+    "Colorado State"      = "Colorado St.",
+    "Colorado St."        = "Colorado St.",
+    "Saint Peter's"       = "Saint Peter's",
+    "Montana State"       = "Montana St.",
+    "Montana St."         = "Montana St.",
+    "Grambling State"     = "Grambling",
+    "Grambling"           = "Grambling",
+    "Mount St. Mary's"    = "Mount St. Mary's",
+    "Norfolk State"       = "Norfolk St.",
+    "Norfolk St."         = "Norfolk St.",
+    "Alabama State"       = "Alabama St.",
+    "Alabama St."         = "Alabama St.",
+    "Col. of Charleston"  = "Col. of Charleston",
+    "Charleston"          = "Col. of Charleston",
+    "College of Charleston" = "Col. of Charleston",
+    "Texas Southern"      = "Texas Southern",
+    "Fairleigh Dickinson" = "FDU",
+    "FDU"                 = "FDU",
+    "Loyola Chicago"      = "Loyola Chicago",
+    "Loyola (IL)"         = "Loyola Chicago",
+    "Miami (FL)"          = "Miami (FL)",
+    "Miami"               = "Miami (FL)",
+    "Texas A&M-Corpus Christi" = "A&M-Corpus Christi",
+    "Texas A&M–Corpus Christi" = "A&M-Corpus Christi",
+    "A&M-Corpus Christi"  = "A&M-Corpus Christi",
+    "St. Bonaventure"     = "St. Bonaventure",
+    "New Mexico State"    = "New Mexico St.",
+    "New Mexico St."      = "New Mexico St.",
+    "Cal State Fullerton" = "Cal St. Fullerton",
+    "Cal St. Fullerton"   = "Cal St. Fullerton",
+    "Georgia State"       = "Georgia St.",
+    "Georgia St."         = "Georgia St.",
+    "Murray State"        = "Murray St.",
+    "Murray St."          = "Murray St.",
+    "Jacksonville State"  = "Jacksonville St.",
+    "Jacksonville St."    = "Jacksonville St.",
+    "Texas A&M"           = "Texas A&M",
+    "Penn State"          = "Penn St.",
+    "Penn St."            = "Penn St.",
+    "Northern Kentucky"   = "Northern Ky.",
+    "Northern Ky."        = "Northern Ky.",
+    "Arizona State"       = "Arizona St.",
+    "Arizona St."         = "Arizona St.",
+    "Oregon State"        = "Oregon St.",
+    "Oregon St."          = "Oregon St.",
+    "Cleveland State"     = "Cleveland St.",
+    "Cleveland St."       = "Cleveland St.",
+    "Virginia Tech"       = "Virginia Tech",
+    "Appalachian State"   = "App State",
+    "Appalachian St."     = "App State",
+    "App State"           = "App State",
+    "Wichita State"       = "Wichita St.",
+    "Wichita St."         = "Wichita St.",
+    "Eastern Washington"  = "Eastern Wash.",
+    "Eastern Wash."       = "Eastern Wash.",
+    "UNC Greensboro"      = "UNC Greensboro",
+    "Abilene Christian"   = "Abilene Christian",
+    "Hartford"            = "Hartford",
+    "Southeast Missouri State" = "Southeast Mo. St.",
+    "Southeast Missouri St."   = "Southeast Mo. St.",
+    "Southeast Mo. St."        = "Southeast Mo. St.",
+    "Louisiana"           = "Louisiana",
+    "Oral Roberts"        = "Oral Roberts",
+    "Iona"                = "Iona",
+    "UNC Asheville"       = "UNC Asheville",
+    "Saint Joseph's"      = "Saint Joseph's",
+    "St. Thomas (MN)"     = "St. Thomas (MN)",
+    "UC San Diego"        = "UC San Diego",
+    "SIU Edwardsville"    = "SIUE",
+    "SIUE"                = "SIUE",
+    "USC"                 = "Southern California",
+    "Southern California" = "Southern California",
+    "Florida State"       = "Florida St.",
+    "Florida St."         = "Florida St.",
+    "Oklahoma State"      = "Oklahoma St.",
+    "Oklahoma St."        = "Oklahoma St.",
+    "Kansas State"        = "Kansas St.",
+    "Kansas St."          = "Kansas St.",
+    "Kent State"          = "Kent St.",
+    "Kent St."            = "Kent St.",
+    "UNC Wilmington"      = "UNCW",
+    "UNCW"                = "UNCW",
+    "Uconn"               = "UConn",
+    "UConn"               = "UConn",
+    "Connecticut"         = "UConn",
+    name
+  )
+}
 
 ################################################################################
-# FETCH 2025-26 ACTUAL SEEDS FROM WIKIPEDIA
+# WIKIPEDIA SEEDS SCRAPER
 ################################################################################
-get_actual_seeds_2026 <- function() {
-  url        <- "https://en.wikipedia.org/wiki/2026_NCAA_Division_I_men%27s_basketball_tournament"
-  local_path <- "C:/Users/Chase/.gemini/antigravity-ide/brain/aca4c5f8-41cf-4f0d-8cb7-645cee9f1ecc/.system_generated/steps/103/content.md"
-
+get_actual_seeds_wiki <- function(yr) {
+  url <- paste0("https://en.wikipedia.org/wiki/", yr, "_NCAA_Division_I_men%27s_basketball_tournament")
+  
   webpage <- NULL
-  tryCatch({ webpage <- read_html(url) },
-           error = function(e) {
-             if (file.exists(local_path)) webpage <<- read_html(local_path)
-           })
-
+  tryCatch({
+    webpage <- read_html(url)
+  }, error = function(e) {
+    warning(paste("Could not load actual seeds for year", yr, "from Wikipedia."))
+  })
+  
   if (is.null(webpage)) {
-    warning("Could not load 2026 actual seeds from Wikipedia; actual seeds will be NA for 2025-26.")
     return(data.frame(School = character(), Actual_Tournament_Seed = integer(),
                       Actual_Overall_Seed = integer(), Actual_Region = character(),
-                      stringsAsFactors = FALSE))
+                      Season = character(), stringsAsFactors = FALSE))
   }
-
-  tables         <- html_nodes(webpage, "table")
+  
+  tables <- html_nodes(webpage, "table")
   extracted_list <- list()
-  regions        <- c("East", "West", "South", "Midwest")
-  region_count   <- 1
-
+  regions <- c("East", "West", "South", "Midwest")
+  region_count <- 1
+  
   for (i in seq_along(tables)) {
     headers <- trimws(html_text(html_nodes(tables[i], "th")))
-    if (any(grepl("Overall seed", headers, ignore.case = TRUE)) &&
-        any(grepl("School",       headers, ignore.case = TRUE))) {
+    has_seed <- any(grepl("seed", headers, ignore.case = TRUE))
+    has_school <- any(grepl("school|team", headers, ignore.case = TRUE))
+    
+    if (has_seed && has_school) {
       df <- html_table(tables[i], fill = TRUE)[[1]]
-      # Only the four regional tables (16-18 rows, 7 cols)
+      # Filter for typical regional seeding tables: 16-20 rows, 5-10 cols
       if (nrow(df) >= 15 && nrow(df) <= 20 && ncol(df) >= 5 && ncol(df) <= 10) {
         df[] <- lapply(df, as.character)
-        df$Region <- if (region_count <= 4) regions[region_count] else "Unknown"
+        df$Region <- if (region_count <= 4) regions[region_count] else paste0("Region_", region_count)
         region_count <- region_count + 1
         extracted_list[[length(extracted_list) + 1]] <- df
       }
     }
   }
-
+  
   if (length(extracted_list) == 0) {
-    warning("No seed tables found in Wikipedia page.")
+    warning(paste("No seed tables found in Wikipedia page for year", yr))
     return(data.frame(School = character(), Actual_Tournament_Seed = integer(),
                       Actual_Overall_Seed = integer(), Actual_Region = character(),
-                      stringsAsFactors = FALSE))
+                      Season = character(), stringsAsFactors = FALSE))
   }
-
-  combined       <- bind_rows(extracted_list)
+  
+  combined <- bind_rows(extracted_list)
   names(combined) <- make.names(names(combined))
-  combined$Seed        <- as.integer(gsub("[*†]", "", combined$Seed))
-  combined$Overall.seed <- as.integer(combined$Overall.seed)
-
-  map_wiki_team <- function(name) {
-    if (is.na(name) || name == "") return(NA_character_)
-    name <- trimws(gsub("\u00a0", " ", name))
-    switch(name,
-      "Saint Mary's"       = "Saint Mary's (CA)",
-      "Queens"             = "Queens (NC)",
-      "Prairie View A&M"  = "Prairie View",
-      "Northern Iowa"      = "UNI",
-      "St. John's"         = "St. John's (NY)",
-      "North Dakota State" = "North Dakota St.",
-      "Tennessee State"    = "Tennessee St.",
-      "Michigan State"     = "Michigan St.",
-      "Ohio State"         = "Ohio St.",
-      "South Florida"      = "South Fla.",
-      "Utah State"         = "Utah St.",
-      "Kennesaw State"     = "Kennesaw St.",
-      "Iowa State"         = "Iowa St.",
-      "Wright State"       = "Wright St.",
-      name
-    )
+  
+  # Identify key columns using grep
+  school_col  <- grep("school|team", names(combined), ignore.case = TRUE, value = TRUE)[1]
+  seed_col    <- grep("^seed", names(combined), ignore.case = TRUE, value = TRUE)[1]
+  overall_col <- grep("overall.seed", names(combined), ignore.case = TRUE, value = TRUE)[1]
+  
+  combined$CleanSchool <- combined[[school_col]]
+  combined$CleanSchool <- gsub("\\[[a-z]\\]", "", combined$CleanSchool)
+  combined$CleanSchool <- trimws(gsub("\u00a0", " ", combined$CleanSchool))
+  
+  combined$CleanSeed <- as.integer(gsub("[*†]", "", combined[[seed_col]]))
+  
+  combined$CleanOverall <- NA_integer_
+  if (!is.na(overall_col)) {
+    clean_overall_val <- gsub("[^0-9]", "", combined[[overall_col]])
+    combined$CleanOverall <- as.integer(clean_overall_val)
   }
-
-  combined$MappedSchool <- sapply(combined$School, map_wiki_team)
-  combined <- combined[!is.na(combined$MappedSchool), ]
-
+  
+  combined$MappedSchool <- sapply(combined$CleanSchool, normalize_team_name)
+  combined <- combined[!is.na(combined$MappedSchool) & !is.na(combined$CleanSeed), ]
+  combined <- combined[combined$CleanSchool != "" & !grepl("school|team", combined$CleanSchool, ignore.case = TRUE), ]
+  
   data.frame(
-    School               = combined$MappedSchool,
-    Actual_Tournament_Seed = combined$Seed,
-    Actual_Overall_Seed  = combined$Overall.seed,
-    Actual_Region        = combined$Region,
-    stringsAsFactors     = FALSE
+    School                 = combined$MappedSchool,
+    Actual_Tournament_Seed = combined$CleanSeed,
+    Actual_Overall_Seed    = combined$CleanOverall,
+    Actual_Region          = combined$Region,
+    Season                 = as.character(yr - 1),
+    stringsAsFactors       = FALSE
   )
 }
 
-cat("Fetching 2025-26 actual seeds from Wikipedia...\n")
-actual_seeds_2026 <- get_actual_seeds_2026()
-cat("  Fetched:", nrow(actual_seeds_2026), "teams.\n")
-
 ################################################################################
-# SPLIT RECORDS FUNCTION
+# RECORD PARSING HELPER FUNCTIONS
 ################################################################################
 clean_and_split <- function(vec) {
   month_map <- c(jan=1,feb=2,mar=3,apr=4,may=5,jun=6,
@@ -130,9 +255,6 @@ clean_and_split <- function(vec) {
   data.frame(Win = as.integer(first), Loss = as.integer(second))
 }
 
-################################################################################
-# PARSE RECORD COLUMNS
-################################################################################
 parse_records <- function(df) {
   list(
     wl      = clean_and_split(df$WL),
@@ -146,20 +268,13 @@ parse_records <- function(df) {
   )
 }
 
-train_rec <- parse_records(train_input)
-test_rec  <- parse_records(test_input)
-
-################################################################################
-# BUILD CLEAN DATAFRAMES
-################################################################################
-build_df <- function(raw, rec, include_seed = FALSE) {
-  df <- data.frame(
+build_df <- function(raw, rec) {
+  data.frame(
     RecordID      = raw$RecordID,
     Season        = sapply(strsplit(raw$Season, "-"), `[`, 1),
     Team          = raw$Team,
     Conference    = raw$Conference,
-    Bid.Type      = raw$Bid.Type,
-    Net.Rank      = raw$NET.Rank,
+    NET.Rank      = raw$NET.Rank,
     prevNET       = raw$PrevNET,
     AvgOppNETRank = raw$AvgOppNETRank,
     AvgOppNET     = raw$AvgOppNET,
@@ -180,18 +295,11 @@ build_df <- function(raw, rec, include_seed = FALSE) {
     Q3.Win        = rec$q3$Win,
     Q3.Loss       = rec$q3$Loss,
     Q4.Win        = rec$q4$Win,
-    Q4.Loss       = rec$q4$Loss
+    Q4.Loss       = rec$q4$Loss,
+    stringsAsFactors = FALSE
   )
-  if (include_seed) df$Overall.Seed <- raw$Overall.Seed
-  df
 }
 
-train <- build_df(train_input, train_rec, include_seed = TRUE)
-test  <- build_df(test_input,  test_rec,  include_seed = FALSE)
-
-################################################################################
-# WIN/LOSS RATIOS
-################################################################################
 add_ratios <- function(df, rec) {
   df$WL.Ratio      <- rec$wl$Win      / (rec$wl$Loss      + 1)
   df$Conf.Ratio    <- rec$conf$Win    / (rec$conf$Loss    + 1)
@@ -204,12 +312,6 @@ add_ratios <- function(df, rec) {
   df
 }
 
-train <- add_ratios(train, train_rec)
-test  <- add_ratios(test,  test_rec)
-
-################################################################################
-# QUADRANT SCORE
-################################################################################
 quad_score <- function(df) {
   (df$Q1.Win - df$Q1.Loss) * 0.4 +
     (df$Q2.Win - df$Q2.Loss) * 0.3 +
@@ -217,41 +319,89 @@ quad_score <- function(df) {
     (df$Q4.Win - df$Q4.Loss) * 0.1
 }
 
-train$Q.Score <- quad_score(train)
-test$Q.Score  <- quad_score(test)
+################################################################################
+# LOAD DATA AND COMBINE
+################################################################################
+cat("Loading and processing local CSV datasets...\n")
+train_raw      <- read.csv("data/NCAA_Seed_Training_Set2.0.csv", na.strings = "", stringsAsFactors = FALSE)
+test_hist_raw  <- read.csv("data/NCAA_Seed_Test_Set2.0.csv", na.strings = "", stringsAsFactors = FALSE)
+test_2026_raw  <- read.csv("data/NCAA_Seed_Test_Set_2026.csv", na.strings = "", stringsAsFactors = FALSE)
+match_data     <- read.csv("data/college_basketball_games_2020_2025.csv")
+
+# Standardize spaces and dashes in raw column names
+names(train_raw)     <- gsub("[ -]", ".", names(train_raw))
+names(test_hist_raw) <- gsub("[ -]", ".", names(test_hist_raw))
+names(test_2026_raw) <- gsub("[ -]", ".", names(test_2026_raw))
+
+# Parse Win/Loss records
+train_rec     <- parse_records(train_raw)
+test_hist_rec <- parse_records(test_hist_raw)
+test_2026_rec <- parse_records(test_2026_raw)
+
+# Build cleaned data frames
+train_df     <- build_df(train_raw,     train_rec)
+test_hist_df <- build_df(test_hist_raw, test_hist_rec)
+test_2026_df <- build_df(test_2026_raw, test_2026_rec)
+
+# Calculate win ratios and quadrant scores
+train_df     <- add_ratios(train_df,     train_rec)
+test_hist_df <- add_ratios(test_hist_df, test_hist_rec)
+test_2026_df <- add_ratios(test_2026_df, test_2026_rec)
+
+train_df$Q.Score     <- quad_score(train_df)
+test_hist_df$Q.Score <- quad_score(test_hist_df)
+test_2026_df$Q.Score <- quad_score(test_2026_df)
+
+# Annotate source files
+train_df$Source     <- "Train_Hist"
+test_hist_df$Source <- "Test_Hist"
+test_2026_df$Source <- "Test_2026"
+
+# Assign Bid.Type
+train_df$Bid.Type     <- train_raw$Bid.Type
+test_hist_df$Bid.Type <- test_hist_raw$Bid.Type
+test_2026_df$Bid.Type <- test_2026_raw$Bid.Type
+
+# Combine all teams across all seasons
+combined_all <- rbind(train_df, test_hist_df, test_2026_df)
+
+# Standardize team names in combined dataset
+combined_all$Normalized_Team <- sapply(combined_all$Team, normalize_team_name)
 
 ################################################################################
-# WAB (Wins Above Bubble)
+# WAB (Wins Above Bubble) CALCULATION
 ################################################################################
-all_teams <- rbind(
-  train[, c("Team", "Season", "Net.Rank")],
-  test[,  c("Team", "Season", "Net.Rank")]
-)
+cat("Fitting WAB logistic model...\n")
+all_teams <- combined_all[, c("Team", "Season", "NET.Rank")]
+all_teams <- unique(all_teams)
 
 match_data <- merge(match_data, all_teams,
                     by.x = c("homeTeam", "season"),
                     by.y = c("Team", "Season"), all.x = TRUE)
-names(match_data)[names(match_data) == "Net.Rank"] <- "homeTeamRating"
+names(match_data)[names(match_data) == "NET.Rank"] <- "homeTeamRating"
 
 match_data <- merge(match_data, all_teams,
                     by.x = c("awayTeam", "season"),
                     by.y = c("Team", "Season"), all.x = TRUE)
-names(match_data)[names(match_data) == "Net.Rank"] <- "awayTeamRating"
+names(match_data)[names(match_data) == "NET.Rank"] <- "awayTeamRating"
 
+# Impute missing ratings with default median (350)
 match_data$homeTeamRating[is.na(match_data$homeTeamRating)] <- 350
 match_data$awayTeamRating[is.na(match_data$awayTeamRating)] <- 350
 
+# Fit logit WAB model
 wab_model <- glm(homeWinner ~ I(awayTeamRating - homeTeamRating),
                  data = match_data, family = binomial)
 
+# Wins Above Bubble calculations using rank 85 as the standard bubble cutoff
 R_bubble <- 85
 bubble_home_df <- match_data; bubble_home_df$homeTeamRating <- R_bubble
 bubble_away_df <- match_data; bubble_away_df$awayTeamRating <- R_bubble
 
 match_data$bubbleWinProb_Home <- predict(wab_model, bubble_home_df, type = "response")
 match_data$bubbleWinProb_Away <- predict(wab_model, bubble_away_df, type = "response")
-match_data$WAB_home <- as.numeric(match_data$homeWinner) - match_data$bubbleWinProb_Home
-match_data$WAB_away <- as.numeric(match_data$awayWinner) - match_data$bubbleWinProb_Away
+match_data$WAB_home           <- as.numeric(match_data$homeWinner) - match_data$bubbleWinProb_Home
+match_data$WAB_away           <- as.numeric(match_data$awayWinner) - match_data$bubbleWinProb_Away
 
 home_wab <- aggregate(WAB_home ~ homeTeam + season, data = match_data, sum)
 away_wab <- aggregate(WAB_away ~ awayTeam + season, data = match_data, sum)
@@ -262,86 +412,96 @@ final_wab <- merge(home_wab, away_wab, by = c("Team", "Season"), all = TRUE)
 final_wab[is.na(final_wab)] <- 0
 final_wab$WAB <- final_wab$WAB_Home + final_wab$WAB_Away
 
-train <- merge(train, final_wab[, c("Team", "Season", "WAB")],
-               by = c("Team", "Season"), all.x = TRUE)
-test  <- merge(test,  final_wab[, c("Team", "Season", "WAB")],
-               by = c("Team", "Season"), all.x = TRUE)
-
-train$WAB[is.na(train$WAB)] <- 0
-test$WAB[is.na(test$WAB)]   <- 0
-
-cat("Train rows after merging WAB:", nrow(train), "\n")
-train <- subset(train, !is.na(NETNonConfSOS) & !is.na(Net.Rank))
-cat("Train rows after subsetting NAs:", nrow(train), "\n")
-
-cat("Train rows:", nrow(train), "| Test rows:", nrow(test), "\n")
-cat("Qualified in train:", sum(ifelse(!is.na(train$Bid.Type), 1, 0)), "\n")
-cat("Seeds available:", sum(!is.na(train$Overall.Seed)), "\n")
+combined_all <- merge(combined_all, final_wab[, c("Team", "Season", "WAB")],
+                      by = c("Team", "Season"), all.x = TRUE)
+combined_all$WAB[is.na(combined_all$WAB)] <- 0
 
 ################################################################################
-# QUALIFY
+# FETCH HISTORICAL AND CURRENT SEEDS FROM WIKIPEDIA
 ################################################################################
+years <- 2021:2026
+wiki_list <- list()
+for (yr in years) {
+  cat("Fetching actual seeds from Wikipedia for tournament year:", yr, "...\n")
+  wiki_list[[length(wiki_list) + 1]] <- get_actual_seeds_wiki(yr)
+}
+all_actual_seeds <- bind_rows(wiki_list)
+cat("Scraped", nrow(all_actual_seeds), "actual tournament seeds in total.\n")
+
+# Merge actual seeds and regions into the combined dataset
+combined_all <- merge(combined_all, all_actual_seeds,
+                      by.x = c("Season", "Normalized_Team"),
+                      by.y = c("Season", "School"),
+                      all.x = TRUE)
+
+# Qualification status is defined strictly by presence in Wikipedia seeding tables
+combined_all$Qualified_Status <- ifelse(!is.na(combined_all$Actual_Tournament_Seed), 1, 0)
+
+################################################################################
+# TOURNAMENT QUALIFICATION PROBABILITY MODEL (XGBOOST CLASSIFIER)
+################################################################################
+cat("Training XGBoost tournament qualification probability model...\n")
 base_features <- c(
-  "WAB",
-  "Net.Rank", "prevNET", "AvgOppNETRank", "AvgOppNET", "NETSOS", "NETNonConfSOS",
-  "Win", "Loss",
-  "Conf.Win", "Conf.Loss",
-  "NonConf.Win", "NonConf.Loss",
-  "Road.Win", "Road.Loss",
-  "Q1.Win", "Q1.Loss",
-  "Q2.Win", "Q2.Loss",
-  "Q3.Win", "Q3.Loss",
-  "Q4.Win", "Q4.Loss",
+  "WAB", "NET.Rank", "prevNET", "AvgOppNETRank", "AvgOppNET", "NETSOS", "NETNonConfSOS",
+  "Win", "Loss", "Conf.Win", "Conf.Loss", "NonConf.Win", "NonConf.Loss", "Road.Win", "Road.Loss",
+  "Q1.Win", "Q1.Loss", "Q2.Win", "Q2.Loss", "Q3.Win", "Q3.Loss", "Q4.Win", "Q4.Loss",
   "WL.Ratio", "Conf.Ratio", "NonConf.Ratio", "Road.Ratio",
-  "Q1.Ratio", "Q2.Ratio", "Q3.Ratio", "Q4.Ratio",
-  "Q.Score"
+  "Q1.Ratio", "Q2.Ratio", "Q3.Ratio", "Q4.Ratio", "Q.Score"
 )
 
-X <- as.matrix(train[, base_features])
-train$Qualify <- ifelse(!is.na(train$Bid.Type), 1, 0)
-y <- train$Qualify
+# Train on all historical data
+train_qual_data <- subset(combined_all, Source != "Test_2026")
+X_qual <- as.matrix(train_qual_data[, base_features])
+y_qual <- train_qual_data$Qualified_Status
 
-good <- complete.cases(X, y)
-X <- X[good, ]
-y <- y[good]
+# Median imputation for training classifier
+qual_medians <- apply(X_qual, 2, median, na.rm = TRUE)
+for (j in seq_len(ncol(X_qual))) {
+  X_qual[is.na(X_qual[, j]), j] <- qual_medians[j]
+}
 
-dtrain <- xgb.DMatrix(data = X, label = y)
+dtrain_qual <- xgb.DMatrix(data = X_qual, label = y_qual)
 
-param_list <- list(
-  objective = "binary:logistic",
-  eta = 0.05,
-  gamma = 1,
-  max_depth = 6,
-  subsample = 0.8,
+param_qual <- list(
+  objective        = "binary:logistic",
+  eta              = 0.05,
+  gamma            = 1,
+  max_depth        = 6,
+  subsample        = 0.8,
   colsample_bytree = 0.5
 )
 
 set.seed(112)
-xgbcv <- xgb.cv(params = param_list,
-               data = dtrain,
-               nrounds = 1000,
-               nfold = 5,
-               print_every_n = 10,
-               early_stopping_rounds = 30,
-               maximize = FALSE)
+xgbcv_qual <- xgb.cv(params = param_qual,
+                     data = dtrain_qual,
+                     nrounds = 1000,
+                     nfold = 5,
+                     print_every_n = 50,
+                     early_stopping_rounds = 30,
+                     maximize = FALSE,
+                     verbose = 0)
 
-best_nrounds <- xgbcv$niter
-cat("Best qualify nrounds:", best_nrounds, "\n")
+best_nrounds_qual <- xgbcv_qual$niter
+model_qualify <- xgb.train(data = dtrain_qual, params = param_qual, nrounds = best_nrounds_qual)
 
-model_qualify <- xgb.train(
-  data   = dtrain,
-  params = param_list,
-  nrounds = best_nrounds
-)
+# Generate Placement_Probability for all teams
+X_all <- as.matrix(combined_all[, base_features])
+for (j in seq_len(ncol(X_all))) {
+  X_all[is.na(X_all[, j]), j] <- qual_medians[j]
+}
+combined_all$Placement_Probability <- predict(model_qualify, X_all)
 
 ################################################################################
-# XGBOOST
+# REGRESSION SEED PREDICTIONS (TRAINED ON HISTORICAL QUALIFIERS)
 ################################################################################
-trainXG <- subset(train, !is.na(Overall.Seed))
+cat("Training seed regression models on actual historical qualifiers...\n")
+# Filter historical dataset to actual qualifiers only (excluding 2025-26)
+train_reg_data <- subset(combined_all, Qualified_Status == 1 & Source != "Test_2026")
+
+XTrain_raw <- as.matrix(train_reg_data[, base_features])
+XTest_raw  <- as.matrix(combined_all[combined_all$Qualified_Status == 1, base_features])
 
 # Impute missing values with training medians
-XTrain_raw   <- as.matrix(trainXG[, base_features])
-XTest_raw    <- as.matrix(test[, base_features])
 train_medians <- apply(XTrain_raw, 2, median, na.rm = TRUE)
 for (j in seq_len(ncol(XTrain_raw))) {
   XTrain_raw[is.na(XTrain_raw[, j]), j] <- train_medians[j]
@@ -350,14 +510,15 @@ for (j in seq_len(ncol(XTrain_raw))) {
 
 XTrain <- XTrain_raw
 XTest  <- XTest_raw
-y      <- trainXG$Overall.Seed
+y      <- train_reg_data$Actual_Overall_Seed
 
+# Ensure complete cases for regression training
 good   <- complete.cases(XTrain, y)
 XTrain <- XTrain[good, ]
 y      <- y[good]
-cat("XGBoost training rows:", nrow(XTrain), "\n")
+cat("  Regression training rows:", nrow(XTrain), "\n")
 
-# Local train/val split
+# Local validation split for XGBoost
 set.seed(112)
 val_idx <- sample(seq_len(nrow(XTrain)), size = floor(0.2 * nrow(XTrain)))
 X_val <- XTrain[val_idx, ];   y_val <- y[val_idx]
@@ -380,231 +541,97 @@ best_params <- list(
 )
 best_rounds <- 50
 
+# Train XGBoost
 model_val  <- xgb.train(data=dtrain, params=best_params, nrounds=best_rounds, verbose=0)
 val_preds  <- round(predict(model_val, dval))
 local_rmse <- sqrt(mean((val_preds - y_val)^2))
-cat("XGBoost Local Validation RMSE:", round(local_rmse, 5), "\n")
+cat("  XGBoost Local Validation RMSE:", round(local_rmse, 5), "\n")
 
 model_seed_xgb  <- xgb.train(data=dfull, params=best_params, nrounds=best_rounds)
 predicted_seeds <- predict(model_seed_xgb, dtest)
 
-################################################################################
-# LINEAR MODEL
-################################################################################
-lm_features <- c(
-  "Net.Rank", "prevNET", "AvgOppNETRank", "AvgOppNET", "NETSOS", "NETNonConfSOS",
-  "Win", "Loss", "Conf.Win", "Conf.Loss", "NonConf.Win", "NonConf.Loss",
-  "Road.Win", "Road.Loss", "Q1.Win", "Q1.Loss", "Q2.Win", "Q2.Loss",
-  "Q3.Win", "Q3.Loss", "Q4.Win", "Q4.Loss",
-  "WL.Ratio", "Conf.Ratio", "NonConf.Ratio", "Road.Ratio",
-  "Q1.Ratio", "Q2.Ratio", "Q3.Ratio", "Q4.Ratio", "Q.Score", "WAB"
-)
-
-lm_train <- trainXG
-lm_test  <- test
-for (col in lm_features) {
+# Train Linear Model
+lm_train <- train_reg_data
+lm_test  <- combined_all[combined_all$Qualified_Status == 1, ]
+for (col in base_features) {
   med <- median(lm_train[[col]], na.rm = TRUE)
   lm_train[[col]][is.na(lm_train[[col]])] <- med
   lm_test[[col]][is.na(lm_test[[col]])]   <- med
 }
 
-lm_formula   <- as.formula(paste("Overall.Seed ~", paste(lm_features, collapse = " + ")))
+lm_formula   <- as.formula(paste("Actual_Overall_Seed ~", paste(base_features, collapse = " + ")))
 model_lm     <- lm(lm_formula, data = lm_train)
 lm_predicted <- predict(model_lm, lm_test)
 
 lm_val_preds  <- round(predict(model_lm, lm_train[val_idx, ]))
 lm_local_rmse <- sqrt(mean((lm_val_preds - y_val)^2))
-cat("Linear Model Local RMSE:", round(lm_local_rmse, 5), "\n")
+cat("  Linear Model Local RMSE:", round(lm_local_rmse, 5), "\n")
 
-################################################################################
-# ENSEMBLE
-################################################################################
-ensemble_seeds <- round((predicted_seeds + lm_predicted) / 2)
+# Ensemble predictions (simple average of raw predicted seed ratings)
+ensemble_seeds <- (predicted_seeds + lm_predicted) / 2
 
+# Log local diagnostics
 xgb_val_raw   <- predict(model_val, dval)
 lm_val_raw    <- predict(model_lm, lm_train[val_idx, ])
 ens_val_preds <- (xgb_val_raw + lm_val_raw) / 2
 ens_rmse      <- sqrt(mean((ens_val_preds - y_val)^2))
-cat("Ensemble Local RMSE:", round(ens_rmse, 5), "\n")
-
-# Use best performing model locally
-best_preds <- if (ens_rmse <= min(local_rmse, lm_local_rmse)) {
-  cat("Using: Ensemble\n"); ensemble_seeds
-} else if (lm_local_rmse <= local_rmse) {
-  cat("Using: Linear Model\n"); lm_predicted
-} else {
-  cat("Using: XGBoost\n"); predicted_seeds
-}
+cat("  Ensemble Local RMSE:", round(ens_rmse, 5), "\n")
 
 ################################################################################
-# RANKING LOGIC
+# RANKING AND SEED TRANSLATION
 ################################################################################
-train_copy      <- trainXG
-train_preds_xgb <- predict(model_seed_xgb, xgb.DMatrix(XTrain))
-train_preds_lm  <- predict(model_lm, lm_train)
-train_copy$XGB_Pred_Raw      <- train_preds_xgb
-train_copy$LM_Pred_Raw       <- train_preds_lm
-train_copy$Ensemble_Pred_Raw <- (train_preds_xgb + train_preds_lm) / 2
-train_copy$EnsembleSeed      <- train_copy$Ensemble_Pred_Raw
+cat("Ranking and translating overall seeds...\n")
+predictions_df <- combined_all[combined_all$Qualified_Status == 1, ]
 
-test_copy <- test
-test_copy$XGB_Pred_Raw      <- predicted_seeds
-test_copy$LM_Pred_Raw       <- lm_predicted
-test_copy$Ensemble_Pred_Raw <- (predicted_seeds + lm_predicted) / 2
-test_copy$EnsembleSeed      <- test_copy$Ensemble_Pred_Raw
+predictions_df$XGB_Pred_Raw      <- predicted_seeds
+predictions_df$LM_Pred_Raw       <- lm_predicted
+predictions_df$Ensemble_Pred_Raw <- ensemble_seeds
 
-pred_df_train <- train_copy
-pred_df_test  <- test_copy
+predictions_df$XGB_Overall_Seed      <- NA_integer_
+predictions_df$LM_Overall_Seed       <- NA_integer_
+predictions_df$Ensemble_Overall_Seed <- NA_integer_
 
-pred_df_train$Source <- "Train"
-pred_df_test$Source  <- "Test"
-
-# Drop columns that only exist in training (Overall.Seed etc.) before rbind
-# We keep Overall.Seed as NA in test_copy
-pred_df_test$Overall.Seed <- NA_integer_
-
-# Ensure both have same columns for rbind (drop any extra training-only columns)
-common_cols <- intersect(names(pred_df_train), names(pred_df_test))
-pred_df_combined <- rbind(pred_df_train[, common_cols], pred_df_test[, common_cols])
-
-pred_df_combined$Qualify   <- 0
-pred_df_combined$FinalRank <- 0
-# We'll also store prob_qualify here
-pred_df_combined$Placement_Probability <- NA_real_
-
-# Per-season ranking
-for (s in unique(pred_df_combined$Season)) {
-  season_mask <- pred_df_combined$Season == s
-
-  X_season <- as.matrix(pred_df_combined[season_mask, base_features])
-  for (j in seq_len(ncol(X_season))) {
-    X_season[is.na(X_season[, j]), j] <- train_medians[j]
-  }
-
-  prob_qualify <- predict(model_qualify, X_season)
-  pred_df_combined$Placement_Probability[season_mask] <- prob_qualify
-
-  ranks_qualify      <- rank(-prob_qualify, ties.method = "first")
-  qualified_in_season <- ranks_qualify <= 68
-
-  pred_df_combined$Qualify[season_mask] <- ifelse(qualified_in_season, 1, 0)
-
-  to_be_ranked_mask <- season_mask & pred_df_combined$Qualify == 1
-  season_indices    <- which(to_be_ranked_mask)
-
-  if (length(season_indices) > 0) {
-    sorted_indices <- season_indices[order(pred_df_combined$EnsembleSeed[season_indices],
-                                           pred_df_combined$Net.Rank[season_indices])]
-    pred_df_combined$FinalRank[sorted_indices] <- seq_len(length(sorted_indices))
-  }
+# Rank predictions 1-68 within each season
+for (s in unique(predictions_df$Season)) {
+  mask <- predictions_df$Season == s
+  idx  <- which(mask)
+  
+  sub <- predictions_df[idx, ]
+  
+  predictions_df$XGB_Overall_Seed[idx] <- rank(sub$XGB_Pred_Raw, ties.method = "first")
+  predictions_df$LM_Overall_Seed[idx]  <- rank(sub$LM_Pred_Raw,  ties.method = "first")
+  predictions_df$Ensemble_Overall_Seed[idx] <- rank(sub$Ensemble_Pred_Raw, ties.method = "first")
 }
 
-# Per-season per-model ranked seeds (1-68) for ALL qualified teams
+# Translate overall seeds (1-68) to tournament bracket seeds (1-16)
 overall_to_tourn <- function(x) pmin(16L, ceiling(as.integer(round(x)) / 4L))
 
-pred_df_combined$XGB_Overall_Seed      <- NA_integer_
-pred_df_combined$LM_Overall_Seed       <- NA_integer_
-pred_df_combined$Ensemble_Overall_Seed <- NA_integer_
-pred_df_combined$Actual_Region        <- NA_character_
+predictions_df$XGB_Tournament_Seed      <- overall_to_tourn(predictions_df$XGB_Overall_Seed)
+predictions_df$LM_Tournament_Seed       <- overall_to_tourn(predictions_df$LM_Overall_Seed)
+predictions_df$Ensemble_Tournament_Seed <- overall_to_tourn(predictions_df$Ensemble_Overall_Seed)
 
-for (s in unique(pred_df_combined$Season)) {
-  mask <- pred_df_combined$Season == s & pred_df_combined$Qualify == 1
-  idx  <- which(mask)
-  if (length(idx) == 0) next
+# Calculate errors
+predictions_df$XGB_Error_Overall      <- predictions_df$Actual_Overall_Seed - predictions_df$XGB_Overall_Seed
+predictions_df$LM_Error_Overall       <- predictions_df$Actual_Overall_Seed - predictions_df$LM_Overall_Seed
+predictions_df$Ensemble_Error_Overall <- predictions_df$Actual_Overall_Seed - predictions_df$Ensemble_Overall_Seed
 
-  sub <- pred_df_combined[idx, ]
-
-  # Rank each model's predictions (ascending = better seed)
-  pred_df_combined$XGB_Overall_Seed[idx] <-
-    rank(sub$XGB_Pred_Raw, ties.method = "first")
-  pred_df_combined$LM_Overall_Seed[idx]  <-
-    rank(sub$LM_Pred_Raw,  ties.method = "first")
-  pred_df_combined$Ensemble_Overall_Seed[idx] <-
-    rank(sub$Ensemble_Pred_Raw, ties.method = "first")
-}
-
-# Tournament seeds (1-16)
-pred_df_combined$XGB_Tournament_Seed      <- overall_to_tourn(pred_df_combined$XGB_Overall_Seed)
-pred_df_combined$LM_Tournament_Seed       <- overall_to_tourn(pred_df_combined$LM_Overall_Seed)
-pred_df_combined$Ensemble_Tournament_Seed <- overall_to_tourn(pred_df_combined$Ensemble_Overall_Seed)
-pred_df_combined$Actual_Tournament_Seed   <- overall_to_tourn(pred_df_combined$Overall.Seed)
-
-# Errors (where actual seed is available)
-pred_df_combined$XGB_Error_Overall      <- pred_df_combined$Overall.Seed - pred_df_combined$XGB_Overall_Seed
-pred_df_combined$LM_Error_Overall       <- pred_df_combined$Overall.Seed - pred_df_combined$LM_Overall_Seed
-pred_df_combined$Ensemble_Error_Overall <- pred_df_combined$Overall.Seed - pred_df_combined$Ensemble_Overall_Seed
-
-pred_df_combined$XGB_Error_Tournament      <- pred_df_combined$Actual_Tournament_Seed - pred_df_combined$XGB_Tournament_Seed
-pred_df_combined$LM_Error_Tournament       <- pred_df_combined$Actual_Tournament_Seed - pred_df_combined$LM_Tournament_Seed
-pred_df_combined$Ensemble_Error_Tournament <- pred_df_combined$Actual_Tournament_Seed - pred_df_combined$Ensemble_Tournament_Seed
-
-cat("\nGlobal Rank distribution (Tournament Teams Only):\n")
-print(table(pred_df_combined$FinalRank[pred_df_combined$FinalRank > 0]))
+predictions_df$XGB_Error_Tournament      <- predictions_df$Actual_Tournament_Seed - predictions_df$XGB_Tournament_Seed
+predictions_df$LM_Error_Tournament       <- predictions_df$Actual_Tournament_Seed - predictions_df$LM_Tournament_Seed
+predictions_df$Ensemble_Error_Tournament <- predictions_df$Actual_Tournament_Seed - predictions_df$Ensemble_Tournament_Seed
 
 ################################################################################
-# SUBMISSION
+# EXCEL SHEET PREPARATION
 ################################################################################
-test_ranks <- subset(pred_df_combined, Source == "Test")
 
-sub_template <- data.frame(
-  RecordID = test_ranks$RecordID,
-  `Overall Seed` = test_ranks$FinalRank,
-  check.names = FALSE
-)
-
-out_path <- "submissions/submission.csv"
-write.csv(sub_template, out_path, row.names = FALSE)
-cat("Submission saved to:", out_path, "\n")
-
-################################################################################
-# MERGE ACTUAL 2025-26 SEEDS INTO PREDICTIONS
-################################################################################
-# Actual_Tournament_Seed and Actual_Overall_Seed for 2025-26 come from Wikipedia
-if (nrow(actual_seeds_2026) > 0) {
-  # Map to Season key (train uses first year, e.g. "2025" for 2025-26)
-  # test Season column is "2025" (first year extracted in build_df)
-  pred_df_combined <- merge(pred_df_combined, actual_seeds_2026,
-                            by.x = "Team", by.y = "School", all.x = TRUE,
-                            suffixes = c("", "_wiki"))
-
-  # For Test rows where we just fetched actuals, populate
-  is_test <- pred_df_combined$Source == "Test"
-  pred_df_combined$Overall.Seed[is_test] <- pred_df_combined$Actual_Overall_Seed[is_test]
-  pred_df_combined$Actual_Tournament_Seed[is_test] <- pred_df_combined$Actual_Tournament_Seed_wiki[is_test]
-
-  # Recalculate Actual_Tournament_Seed from official Overall for all rows
-  pred_df_combined$Actual_Tournament_Seed <- ifelse(
-    !is.na(pred_df_combined$Actual_Tournament_Seed_wiki) & is_test,
-    pred_df_combined$Actual_Tournament_Seed_wiki,
-    pred_df_combined$Actual_Tournament_Seed
-  )
-
-  # Recalculate errors for 2025-26 now that we have actuals
-  pred_df_combined$XGB_Error_Overall[is_test]      <- pred_df_combined$Overall.Seed[is_test] - pred_df_combined$XGB_Overall_Seed[is_test]
-  pred_df_combined$LM_Error_Overall[is_test]        <- pred_df_combined$Overall.Seed[is_test] - pred_df_combined$LM_Overall_Seed[is_test]
-  pred_df_combined$Ensemble_Error_Overall[is_test]  <- pred_df_combined$Overall.Seed[is_test] - pred_df_combined$Ensemble_Overall_Seed[is_test]
-  pred_df_combined$XGB_Error_Tournament[is_test]    <- pred_df_combined$Actual_Tournament_Seed[is_test] - pred_df_combined$XGB_Tournament_Seed[is_test]
-  pred_df_combined$LM_Error_Tournament[is_test]     <- pred_df_combined$Actual_Tournament_Seed[is_test] - pred_df_combined$LM_Tournament_Seed[is_test]
-  pred_df_combined$Ensemble_Error_Tournament[is_test] <- pred_df_combined$Actual_Tournament_Seed[is_test] - pred_df_combined$Ensemble_Tournament_Seed[is_test]
-
-  # Add region info
-  pred_df_combined$Actual_Region[is_test] <- pred_df_combined$Actual_Region_wiki[is_test]
-  # Drop the suffixed wiki column
-  wiki_cols <- grep("_wiki$", names(pred_df_combined), value = TRUE)
-  pred_df_combined <- pred_df_combined[, !names(pred_df_combined) %in% wiki_cols]
-}
-
-################################################################################
-# SHEET 1: CLEANED DATA
-################################################################################
-cleaned_data <- pred_df_combined %>%
+# ---- SHEET 1: CLEANED DATA (ALL TEAMS) ----
+cleaned_data <- combined_all %>%
   select(
     RecordID,
     Season,
     Team,
     Conference,
     Source,
-    NET_Rank       = Net.Rank,
+    NET_Rank       = NET.Rank,
     prevNET,
     AvgOppNETRank,
     AvgOppNET,
@@ -637,24 +664,19 @@ cleaned_data <- pred_df_combined %>%
     Q_Score        = Q.Score,
     WAB,
     Placement_Probability,
-    Qualified_Status = Qualify,
+    Qualified_Status,
     Bid_Type       = Bid.Type
   )
 
-cat("Sheet 1 (Cleaned_Data) rows:", nrow(cleaned_data), "\n")
-
-################################################################################
-# SHEET 2: MODEL PREDICTIONS
-################################################################################
-predictions_df <- pred_df_combined %>%
-  filter(Qualify == 1) %>%
+# ---- SHEET 2: MODEL PREDICTIONS (TOURNAMENT TEAMS) ----
+predictions_export_df <- predictions_df %>%
   select(
     RecordID,
     Season,
     Team,
     Conference,
     Source,
-    Actual_Overall_Seed      = Overall.Seed,
+    Actual_Overall_Seed,
     Actual_Tournament_Seed,
     Actual_Region,
     LM_Pred_Raw,
@@ -674,25 +696,17 @@ predictions_df <- pred_df_combined %>%
     Ensemble_Error_Tournament
   )
 
-cat("Sheet 2 (Model_Predictions) rows:", nrow(predictions_df), "\n")
+# ---- SHEET 3: MATCHUP PROBABILITIES (2025-26 PAIRWISE MATCHUPS) ----
+cat("Preparing pairwise matchups for 2025-26 tournament teams...\n")
+tourn_teams_2026 <- predictions_df %>%
+  filter(Season == "2025") %>%
+  select(Team, NET_Rank = NET.Rank, Ensemble_Tournament_Seed)
 
-################################################################################
-# SHEET 3: MATCHUP PROBABILITIES
-################################################################################
-# Get 68 predicted tournament teams for 2025-26
-tourn_teams_2026 <- pred_df_combined %>%
-  filter(Source == "Test", Qualify == 1) %>%
-  select(Team, NET_Rank = Net.Rank, Ensemble_Tournament_Seed)
-
-cat("Tournament teams for matchup sheet:", nrow(tourn_teams_2026), "\n")
-
-# Extract WAB model coefficients
-b0 <- coef(wab_model)[1]  # Intercept
-b1 <- coef(wab_model)[2]  # Slope on (away - home rating)
-
+b0 <- coef(wab_model)[1]
+b1 <- coef(wab_model)[2]
 logistic <- function(x) 1 / (1 + exp(-x))
 
-# All ordered pairs (A, B) where A != B
+# Generate directed pairs (A, B) where A != B
 team_pairs <- expand.grid(
   Team_A = tourn_teams_2026$Team,
   Team_B = tourn_teams_2026$Team,
@@ -700,7 +714,7 @@ team_pairs <- expand.grid(
 ) %>%
   filter(Team_A != Team_B)
 
-# Merge team info
+# Merge team stats
 team_pairs <- team_pairs %>%
   left_join(tourn_teams_2026, by = c("Team_A" = "Team")) %>%
   rename(Team_A_NET = NET_Rank, Team_A_Seed = Ensemble_Tournament_Seed) %>%
@@ -718,11 +732,7 @@ matchup_df <- team_pairs %>%
   select(Team_A, Team_B, Team_A_NET, Team_B_NET, Team_A_Seed, Team_B_Seed,
          Win_Prob_Neutral, Win_Prob_TeamA_Home, Win_Prob_TeamA_Away)
 
-cat("Sheet 3 (Matchup_Probabilities) rows:", nrow(matchup_df), "\n")
-
-################################################################################
-# SHEET 4: VARIABLE DESCRIPTIONS
-################################################################################
+# ---- SHEET 4: VARIABLE DESCRIPTIONS ----
 var_descriptions <- data.frame(
   Variable_Name = c(
     "RecordID", "Season", "Team", "Conference", "Source",
@@ -812,7 +822,7 @@ var_descriptions <- data.frame(
     "Season year string — first year of the academic year (e.g., '2020' for 2020-21, '2025' for 2025-26).",
     "Team name as provided in the dataset.",
     "Conference the team belongs to.",
-    "'Train' for historical seasons 2020-21 through 2024-25; 'Test' for the predicted 2025-26 season.",
+    "Data source: 'Train_Hist' (training CSV), 'Test_Hist' (historical test CSV), or 'Test_2026' (current 2025-26 test CSV).",
     "NCAA Evaluation Tool (NET) Rank at the end of the regular season. Lower is better.",
     "Previous season's final NET Rank. Lower is better.",
     "Average NET Rank of all opponents played. Lower means stronger schedule.",
@@ -846,22 +856,22 @@ var_descriptions <- data.frame(
     "Weighted quadrant score: (Q1W-Q1L)*0.4 + (Q2W-Q2L)*0.3 + (Q3W-Q3L)*0.2 + (Q4W-Q4L)*0.1.",
     "Wins Above Bubble: total wins above an average bubble team (NET Rank 85) playing the same schedule.",
     "Predicted probability of qualifying for the tournament (0.0-1.0) from the XGBoost binary classification model.",
-    "Binary tournament qualification: 1 if team is in the predicted top 68, 0 otherwise.",
+    "Binary tournament qualification: 1 if team is in the actual tournament, 0 otherwise.",
     "Actual bid type for historical data: 'Auto' (conference champion), 'At-Large', or NA (did not qualify).",
-    "Official NCAA Selection Committee overall seed rank (1-68). From Wikipedia for 2025-26; from dataset for historical seasons.",
-    "Official tournament bracket seed (1-16). Derived from Actual_Overall_Seed as ceiling(Actual_Overall_Seed/4).",
-    "Official NCAA tournament region (East, West, South, Midwest). Scraped from Wikipedia for 2025-26; NA for historical years.",
-    "Continuous raw predicted seed from the Linear Regression model (not rounded or ranked).",
+    "Official NCAA Selection Committee overall seed rank (1-68). From Wikipedia.",
+    "Official tournament bracket seed (1-16). From Wikipedia.",
+    "Official NCAA tournament region (East, West, South, Midwest). From Wikipedia.",
+    "Continuous raw predicted seed rating from the Linear Regression model (not rounded or ranked).",
     "Overall seed rank (1-68) assigned by the Linear Model, ranked within each season's qualified teams.",
     "Tournament seed (1-16) derived from LM_Overall_Seed as ceiling(LM_Overall_Seed/4).",
     "Actual_Overall_Seed minus LM_Overall_Seed. Positive = model underseeded; negative = overseeded.",
     "Actual_Tournament_Seed minus LM_Tournament_Seed.",
-    "Continuous raw predicted seed from the XGBoost Regression model (not rounded or ranked).",
+    "Continuous raw predicted seed rating from the XGBoost Regression model (not rounded or ranked).",
     "Overall seed rank (1-68) assigned by the XGBoost model, ranked within each season's qualified teams.",
     "Tournament seed (1-16) derived from XGB_Overall_Seed as ceiling(XGB_Overall_Seed/4).",
     "Actual_Overall_Seed minus XGB_Overall_Seed.",
     "Actual_Tournament_Seed minus XGB_Tournament_Seed.",
-    "Continuous raw predicted seed from the Ensemble model: average of LM_Pred_Raw and XGB_Pred_Raw.",
+    "Continuous raw predicted seed rating from the Ensemble model: average of LM_Pred_Raw and XGB_Pred_Raw.",
     "Overall seed rank (1-68) assigned by the Ensemble model, ranked within each season's qualified teams.",
     "Tournament seed (1-16) derived from Ensemble_Overall_Seed as ceiling(Ensemble_Overall_Seed/4).",
     "Actual_Overall_Seed minus Ensemble_Overall_Seed.",
@@ -879,69 +889,61 @@ var_descriptions <- data.frame(
   stringsAsFactors = FALSE
 )
 
-cat("Sheet 4 (Variable_Descriptions) rows:", nrow(var_descriptions), "\n")
-
 ################################################################################
-# WRITE EXCEL FILE
+# WRITE EXCEL WORKBOOK
 ################################################################################
-cat("\nWriting Excel file...\n")
+cat("\nWriting final multi-sheet Excel file...\n")
 wb <- createWorkbook()
 
-# ---- Sheet 1: Cleaned_Data ----
-addWorksheet(wb, "Cleaned_Data")
-writeData(wb, "Cleaned_Data", cleaned_data)
-
-# Header style
+# Setup header styles
 header_style <- createStyle(fontColour = "#FFFFFF", fgFill = "#1F3864",
                              halign = "center", textDecoration = "bold",
                              border = "Bottom", borderColour = "#FFFFFF")
-addStyle(wb, "Cleaned_Data", header_style, rows = 1, cols = 1:ncol(cleaned_data), gridExpand = TRUE)
-setColWidths(wb, "Cleaned_Data", cols = 1:ncol(cleaned_data), widths = "auto")
-
-# ---- Sheet 2: Model_Predictions ----
-addWorksheet(wb, "Model_Predictions")
-writeData(wb, "Model_Predictions", predictions_df)
-
-addStyle(wb, "Model_Predictions", header_style, rows = 1, cols = 1:ncol(predictions_df), gridExpand = TRUE)
-setColWidths(wb, "Model_Predictions", cols = 1:ncol(predictions_df), widths = "auto")
-
-# ---- Sheet 3: Matchup_Probabilities ----
-addWorksheet(wb, "Matchup_Probabilities")
-writeData(wb, "Matchup_Probabilities", matchup_df)
-
-addStyle(wb, "Matchup_Probabilities", header_style, rows = 1, cols = 1:ncol(matchup_df), gridExpand = TRUE)
-setColWidths(wb, "Matchup_Probabilities", cols = 1:ncol(matchup_df), widths = "auto")
-
-# ---- Sheet 4: Variable_Descriptions ----
-addWorksheet(wb, "Variable_Descriptions")
-writeData(wb, "Variable_Descriptions", var_descriptions)
 
 desc_header_style <- createStyle(fontColour = "#FFFFFF", fgFill = "#14532D",
                                   halign = "center", textDecoration = "bold",
                                   border = "Bottom", borderColour = "#FFFFFF")
-addStyle(wb, "Variable_Descriptions", desc_header_style, rows = 1,
-         cols = 1:ncol(var_descriptions), gridExpand = TRUE)
-# Wrap description column
-wrap_style <- createStyle(wrapText = TRUE)
-addStyle(wb, "Variable_Descriptions", wrap_style, rows = 2:(nrow(var_descriptions)+1),
-         cols = ncol(var_descriptions), gridExpand = TRUE)
-setColWidths(wb, "Variable_Descriptions",
-             cols = 1:(ncol(var_descriptions)-1), widths = "auto")
-setColWidths(wb, "Variable_Descriptions",
-             cols = ncol(var_descriptions), widths = 60)
 
-# Alternate row shading for readability
+# Sheet 1: Cleaned_Data
+addWorksheet(wb, "Cleaned_Data")
+writeData(wb, "Cleaned_Data", cleaned_data)
+addStyle(wb, "Cleaned_Data", header_style, rows = 1, cols = 1:ncol(cleaned_data), gridExpand = TRUE)
+setColWidths(wb, "Cleaned_Data", cols = 1:ncol(cleaned_data), widths = "auto")
+
+# Sheet 2: Model_Predictions
+addWorksheet(wb, "Model_Predictions")
+writeData(wb, "Model_Predictions", predictions_export_df)
+addStyle(wb, "Model_Predictions", header_style, rows = 1, cols = 1:ncol(predictions_export_df), gridExpand = TRUE)
+setColWidths(wb, "Model_Predictions", cols = 1:ncol(predictions_export_df), widths = "auto")
+
+# Sheet 3: Matchup_Probabilities
+addWorksheet(wb, "Matchup_Probabilities")
+writeData(wb, "Matchup_Probabilities", matchup_df)
+addStyle(wb, "Matchup_Probabilities", header_style, rows = 1, cols = 1:ncol(matchup_df), gridExpand = TRUE)
+setColWidths(wb, "Matchup_Probabilities", cols = 1:ncol(matchup_df), widths = "auto")
+
+# Sheet 4: Variable_Descriptions
+addWorksheet(wb, "Variable_Descriptions")
+writeData(wb, "Variable_Descriptions", var_descriptions)
+addStyle(wb, "Variable_Descriptions", desc_header_style, rows = 1, cols = 1:ncol(var_descriptions), gridExpand = TRUE)
+
+wrap_style <- createStyle(wrapText = TRUE)
+addStyle(wb, "Variable_Descriptions", wrap_style, rows = 2:(nrow(var_descriptions)+1), cols = ncol(var_descriptions), gridExpand = TRUE)
+setColWidths(wb, "Variable_Descriptions", cols = 1:(ncol(var_descriptions)-1), widths = "auto")
+setColWidths(wb, "Variable_Descriptions", cols = ncol(var_descriptions), widths = 60)
+
+# Alternate shading
 alt_row_style <- createStyle(fgFill = "#F0F7F0")
 for (r in seq(2, nrow(var_descriptions)+1, by = 2)) {
-  addStyle(wb, "Variable_Descriptions", alt_row_style, rows = r,
-           cols = 1:ncol(var_descriptions), gridExpand = TRUE, stack = TRUE)
+  addStyle(wb, "Variable_Descriptions", alt_row_style, rows = r, cols = 1:ncol(var_descriptions), gridExpand = TRUE, stack = TRUE)
 }
 
-# Save
+# Save workbook
 excel_path <- "data/NCAA_Tournament_Dashboard_Data.xlsx"
 saveWorkbook(wb, excel_path, overwrite = TRUE)
-cat("Excel file saved to:", excel_path, "\n")
-cat("  Sheet 1 (Cleaned_Data):          ", nrow(cleaned_data),     "rows x", ncol(cleaned_data),     "cols\n")
-cat("  Sheet 2 (Model_Predictions):     ", nrow(predictions_df),   "rows x", ncol(predictions_df),   "cols\n")
-cat("  Sheet 3 (Matchup_Probabilities): ", nrow(matchup_df),        "rows x", ncol(matchup_df),        "cols\n")
-cat("  Sheet 4 (Variable_Descriptions):", nrow(var_descriptions),  "rows x", ncol(var_descriptions),  "cols\n")
+
+cat("Excel workbook saved to:", excel_path, "\n")
+cat("  Sheet 1 (Cleaned_Data):          ", nrow(cleaned_data),           "rows x", ncol(cleaned_data),           "cols\n")
+cat("  Sheet 2 (Model_Predictions):     ", nrow(predictions_export_df), "rows x", ncol(predictions_export_df), "cols\n")
+cat("  Sheet 3 (Matchup_Probabilities): ", nrow(matchup_df),              "rows x", ncol(matchup_df),              "cols\n")
+cat("  Sheet 4 (Variable_Descriptions): ", nrow(var_descriptions),        "rows x", ncol(var_descriptions),        "cols\n")
